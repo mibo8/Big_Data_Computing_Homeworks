@@ -1,3 +1,4 @@
+import com.sun.xml.bind.v2.TODO;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -45,16 +46,14 @@ public class G10HW1 {
         // SETTING GLOBAL VARIABLES
         // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-        long numObjs;
-        numObjs = pairStrings.count();
-        System.out.println("Number of documents = " + numObjs);
         JavaPairRDD<String, Long> count;
+
 
 
         // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
         // CLASS COUNT 1st version
         // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-/*
+
         count = pairStrings
                 .flatMapToPair((line) -> {    // <-- MAP PHASE (R1)
                     String[] tokens = line.split(" ");
@@ -90,8 +89,13 @@ public class G10HW1 {
                     return sum;
                 });
 
+        System.out.println("VERSION WITH DETERMINISTIC PARTITIONS");
+        System.out.print("Output pairs = ");
+        for(Tuple2<String, Long> tuple : count.sortByKey().collect()) {
+            System.out.print("("+tuple._1()+","+tuple._2()+")");
+        }
+        System.out.print("\n");
 
-*/
 
 
         // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -123,25 +127,26 @@ public class G10HW1 {
                         pairs.add(new Tuple2<>(e.getKey(), e.getValue()));
                     }
                     return pairs.iterator();
-                });
-
-
-
-
-
-                /*.groupByKey()  // <-- REDUCE PHASE (R2)
+                })
+                .groupByKey()  // <-- REDUCE PHASE (R2)
                 .mapValues((it) -> {
                         long sum = 0;
                         for (long c : it) {
                             sum += c;
                         }
                         return sum;
-                });*/
-        System.out.println(count.getNumPartitions());
+                });
 
-        for(Tuple2<String, Long> tuple : count.collect()) {
-            System.out.println("("+tuple._1()+","+tuple._2()+")");
+
+        Tuple2<String, Long> mostFrequent = new Tuple2<>("Z", -1L);
+
+        for(Tuple2<String, Long> tuple : count.sortByKey().collect()) {
+            if(tuple._2()>mostFrequent._2) mostFrequent=tuple;
         }
+        System.out.println("VERSION WITH SPARK PARTITIONS");
+        System.out.println("Most frequent class = ("+mostFrequent._1()+","+mostFrequent._2()+")");
+
+        //TODO Max partition
     }
 
 }
