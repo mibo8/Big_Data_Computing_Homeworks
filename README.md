@@ -1,4 +1,5 @@
 # BDC
 
-*Homework 1 
-Mainca da fare Max partition size
+## Homework 1
+
+Manca da fare Max partition size
