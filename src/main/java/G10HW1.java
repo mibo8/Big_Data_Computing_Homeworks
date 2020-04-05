@@ -55,11 +55,9 @@ public class G10HW1 {
         // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
         count = pairStrings
-                .flatMapToPair((line) -> {    // <-- MAP PHASE (R1)
+                .mapToPair((line) -> {    // <-- MAP PHASE (R1)
                     String[] tokens = line.split(" ");
-                    ArrayList<Tuple2<String, String>> pairs = new ArrayList<>();
-                    pairs.add(new Tuple2<String,String>(String.valueOf(Integer.parseInt(tokens[0])%K), tokens[1]));
-                    return pairs.iterator();
+                    return new Tuple2<String,String>(String.valueOf(Integer.parseInt(tokens[0])%K), tokens[1]);
                 })
                 .groupByKey()// <-- REDUCE PHASE (R1)
                 .flatMapToPair((modPair) -> {
@@ -96,11 +94,9 @@ public class G10HW1 {
         // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
         count = pairStrings
-                .flatMapToPair((line) -> {    // <-- MAP PHASE (R1)
+                .mapToPair((line) -> {    // <-- MAP PHASE (R1)
                     String[] tokens = line.split(" ");
-                    ArrayList<Tuple2<String, String>> pairs = new ArrayList<>();
-                    pairs.add(new Tuple2<String,String>(String.valueOf(Integer.parseInt(tokens[0])%K), tokens[1]));
-                    return pairs.iterator();
+                    return new Tuple2<String,String>(String.valueOf(Integer.parseInt(tokens[0])%K), tokens[1]);
                 })
                 .mapPartitionsToPair((it) ->{// <-- REDUCE PHASE (R1)
                     HashMap<String, Long> counts = new HashMap<>();
