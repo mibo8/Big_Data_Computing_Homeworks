@@ -1,9 +1,10 @@
-import com.sun.xml.bind.v2.TODO;
+import org.apache.hadoop.mapreduce.v2.app.speculate.TaskRuntimeEstimator;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.storage.StorageLevel;
+import org.dmg.pmml.True;
 import scala.Tuple2;
 
 import java.io.File;
@@ -11,30 +12,22 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
+
 public class G10HW1 {
 
-    public static void main(String[] args) throws IOException {
+    public static  void main(String [] args) {
 
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-        // CHECKING NUMBER OF CMD LINE PARAMETERS
-        // Parameters are: number_partitions, <path to file>
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-        if (args.length != 2) {
+        // Check number of partition and path of dataset given in input by line of command
+        if (args.length != 2)
+        {
             throw new IllegalArgumentException("USAGE: num_partitions file_path");
         }
 
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-        // SPARK SETUP
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-        SparkConf conf = new SparkConf(true).setAppName("Homework1");
-        JavaSparkContext sc = new JavaSparkContext(conf);
+        // Create the Spark context
+        SparkConf config = new SparkConf(true).setAppName("Homework1");
+        // Instantiate the Spark context
+        JavaSparkContext sc = new JavaSparkContext(config);
         sc.setLogLevel("WARN");
-
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-        // INPUT READING
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
         // Read number of partitions
         int K = Integer.parseInt(args[0]);
@@ -42,36 +35,43 @@ public class G10HW1 {
         // Read input file and subdivide it into K random partitions
         JavaRDD<String> pairStrings = sc.textFile(args[1]).repartition(K);
 
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-        // SETTING GLOBAL VARIABLES
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+        JavaPairRDD<String, Long> classcount;
 
-        JavaPairRDD<String, Long> count;
-
-
-
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-        // CLASS COUNT 1st version
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-        count = pairStrings
-                .mapToPair((line) -> {    // <-- MAP PHASE (R1)
-                    String[] tokens = line.split(" ");
-                    return new Tuple2<String,String>(String.valueOf(Integer.parseInt(tokens[0])%K), tokens[1]);
+        classcount = pairStrings
+                // ROUND 1: MAP PHASE
+                .mapToPair((entry) ->
+                {
+                    // Split the input strings in the pair <key, class>
+                    String[] tokens = entry.split(" ");
+                    // return the new key-value pair
+                    return new Tuple2<Integer, String>(Integer.parseInt(tokens[0])%K, tokens[1]);
                 })
-                .groupByKey()// <-- REDUCE PHASE (R1)
-                .flatMapToPair((modPair) -> {
-                    HashMap<String, Long> counts = new HashMap<>();
-                    for (String token : modPair._2()) {
-                        counts.put(token, 1L + counts.getOrDefault(token, 0L));
+
+                //ROUND 1: REDUCE PHASE
+                // Group every entry with the same key in a JavaPairRDD<K,Iterable<V>>
+                .groupByKey()
+                .flatMapToPair((entries) ->
+                {
+                    // Create an intermediate Hashmap which stores the occurrences
+                    HashMap<String, Integer> counter = new HashMap<>();
+                    // fill the Hash Map
+                    for(String entry: entries._2())
+                    {
+                        counter.put(entry, 1+counter.getOrDefault(entry, 0));
                     }
-                    ArrayList<Tuple2<String, Long>> pairs = new ArrayList<>();
-                    for (Map.Entry<String, Long> e : counts.entrySet()) {
-                        pairs.add(new Tuple2<>(e.getKey(), e.getValue()));
+                    // move the hasmap into a suitable type ArrayList
+                    ArrayList<Tuple2<String, Integer>> pairs = new ArrayList<>();
+                    for(Map.Entry<String, Integer> hm : counter.entrySet())
+                    {
+                        pairs.add(new Tuple2<>(hm.getKey(), hm.getValue()));
                     }
                     return pairs.iterator();
+
                 })
-                .groupByKey()    // <-- REDUCE PHASE (R2)
+                //ROUND 2: REDUCE PHASE
+                // Group every entry with the same key in a JavaPairRDD<K,Iterable<V>>
+                .groupByKey()
+                // Calculate the sum of the occurances of every entry
                 .mapValues((it) -> {
                     long sum = 0;
                     for (long c : it) {
@@ -80,57 +80,87 @@ public class G10HW1 {
                     return sum;
                 });
 
+        // Print deterministic partition output
         System.out.println("VERSION WITH DETERMINISTIC PARTITIONS");
         System.out.print("Output pairs = ");
-        for(Tuple2<String, Long> tuple : count.sortByKey().collect()) {
-            System.out.print("("+tuple._1()+","+tuple._2()+")");
+        for(Tuple2<String, Long> tuple : classcount.sortByKey().collect()) {
+            System.out.print("("+tuple._1()+", "+tuple._2()+") ");
         }
         System.out.print("\n");
 
 
-
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-        // CLASS COUNT 2nd version
-        // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-        count = pairStrings
-                .mapToPair((line) -> {    // <-- MAP PHASE (R1)
-                    String[] tokens = line.split(" ");
-                    return new Tuple2<String,String>(String.valueOf(Integer.parseInt(tokens[0])%K), tokens[1]);
+        classcount = pairStrings
+                //ROUND 1: MAP PHASE
+                .mapToPair((entry) ->
+                {
+                    // Split the input strings in the pair <key, class>
+                    String[] tokens = entry.split(" ");
+                    // return the new key-value pair
+                    return new Tuple2<Integer, String>(Integer.parseInt(tokens[0])%K, tokens[1]);
                 })
-                .mapPartitionsToPair((it) ->{// <-- REDUCE PHASE (R1)
-                    HashMap<String, Long> counts = new HashMap<>();
-                    while (it.hasNext()){
-                        Tuple2<String, String> tuple = it.next();
-                        counts.put(tuple._2(), 1L + counts.getOrDefault(tuple._2(), 0L));
-                    }
-                    ArrayList<Tuple2<String, Long>> pairs = new ArrayList<>();
 
-                    for (Map.Entry<String, Long> e : counts.entrySet()) {
-                        pairs.add(new Tuple2<>(e.getKey(), e.getValue()));
+                //ROUND 1: REDUCE PHASE
+                // Runs map transformations on every partition of the RDD
+                .mapPartitionsToPair((cc) -> {
+
+                    HashMap<String, Integer> counter = new HashMap<>();
+                    int nmax = 0; //nmax counter
+
+                    // Count the occurrences of the same object in the partition
+                    while(cc.hasNext())
+                    {
+                        nmax+=1;
+                        Tuple2<Integer, String> tuple = cc.next();
+                        counter.put(tuple._2, 1+counter.getOrDefault(tuple._2, 0));
                     }
+                    // move the hasmap into a suitable type ArrayList
+                    ArrayList<Tuple2<String, Integer>> pairs = new ArrayList<>();
+                    for(Map.Entry<String, Integer> hm : counter.entrySet())
+                    {
+                        pairs.add(new Tuple2<>(hm.getKey(), hm.getValue()));
+                    }
+                    // add the <"maxPartitionSize", nmax> pair
+                    pairs.add(new Tuple2<>("maxPartitionSize", nmax));
+
                     return pairs.iterator();
+
                 })
-                .groupByKey()  // <-- REDUCE PHASE (R2)
-                .mapValues((it) -> {
+                // Group every entry with the same key in a JavaPairRDD<K,Iterable<V>>
+                .groupByKey()
+                // If the entry is an object of our dataset, sums up the occurrences,
+                // Otherwise we select the larger nmax in the subset with key = "maxPartitionsize"
+                .mapToPair((entry) -> {
+                    if(entry._1().equals("maxPartitionSize") == false)
+                    {
                         long sum = 0;
-                        for (long c : it) {
+                        for (long c : entry._2()) {
                             sum += c;
                         }
-                        return sum;
+                        return new Tuple2<String, Long>(entry._1(), sum);
+                    } else
+                    {
+                        long nmax = 0;
+                        for(long c : entry._2()) {
+                            if (c > nmax) nmax = c;
+                        }
+                        return new Tuple2<String, Long>(entry._1(), nmax);
+                    }
                 });
 
-
+        // Check the most frequent class and the nmax of data processed in a partition
         Tuple2<String, Long> mostFrequent = new Tuple2<>("Z", -1L);
+        long maxPartition = 0;
 
-        for(Tuple2<String, Long> tuple : count.sortByKey().collect()) {
-            if(tuple._2()>mostFrequent._2) mostFrequent=tuple;
+        for(Tuple2<String, Long> tuple : classcount.sortByKey().collect()) {
+            if(tuple._1.equals("maxPartitionSize")) {
+                maxPartition = tuple._2;
+            } else if(tuple._2()>mostFrequent._2) mostFrequent=tuple;
         }
+        // Output the spark partition results
         System.out.println("VERSION WITH SPARK PARTITIONS");
         System.out.println("Most frequent class = ("+mostFrequent._1()+","+mostFrequent._2()+")");
+        System.out.println("Max partition size = "+maxPartition);
 
-        //TODO Max partition
     }
 
 }
-
