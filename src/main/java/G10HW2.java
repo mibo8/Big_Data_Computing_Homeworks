@@ -154,7 +154,7 @@ class G10HW2 {
     }
 
 
-    public static ArrayList<Vector> kCenterMPDZanet(ArrayList<Vector> S, int k) {
+    public static ArrayList<Vector> kCenterMPD(ArrayList<Vector> S, int k) {
         ArrayList<Vector> C = new ArrayList<>();
         ArrayList<Double> distances = new ArrayList<>();
         C.add(S.get(666));
@@ -184,7 +184,7 @@ class G10HW2 {
     }
 
 
-    public static ArrayList<Vector> kCenterMPD(ArrayList<Vector> s, int k)
+    public static ArrayList<Vector> kCenterMPDZanet(ArrayList<Vector> s, int k)
     {
 
         ArrayList<Vector> centers = new ArrayList<>();
