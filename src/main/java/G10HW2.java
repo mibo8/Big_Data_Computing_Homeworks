@@ -78,20 +78,6 @@ class G10HW2 {
             System.out.println("Max distance = " + exactCentersDistance);
             System.out.println("Running time = " + totalTime + " ms");
 
-            //----------------------------------------------------
-            inputPoints = new ArrayList<>(readVectorsSeq(filename));
-
-            startTime = System.nanoTime();
-            ArrayList<Vector> Cz = kCenterMPDZanet(inputPoints, k);
-            double exactCentersDistanceZ = exactMPD(Cz);
-            endTime   = System.nanoTime();
-            totalTime = (endTime - startTime)/1000000;
-
-            System.out.println("\nk-CENTER-BASED ALGORITHM");
-            System.out.println("k = " + k);
-            System.out.println("Max distance = " + exactCentersDistance);
-            System.out.println("Running time = " + totalTime + " ms");
-
         }
         catch(Exception e) {
             e.printStackTrace();
@@ -154,37 +140,7 @@ class G10HW2 {
     }
 
 
-    public static ArrayList<Vector> kCenterMPD(ArrayList<Vector> S, int k) {
-        ArrayList<Vector> C = new ArrayList<>();
-        ArrayList<Double> distances = new ArrayList<>();
-        C.add(S.get(666));
-        S.remove(666);
-        for(int i=0; i<S.size(); i++) {
-            distances.add(Math.sqrt(Vectors.sqdist(S.get(i), C.get(0))));
-        }
-        for(int i=1; i<k; i++) {
-            double maxDistance = -1;
-            int centerIndex = 0;
-            for (int j=0; j<S.size(); j++) {
-                double d = Math.sqrt(Vectors.sqdist(S.get(j), S.get(centerIndex)));
-                if(d < distances.get(j)){
-                    distances.set(j, d);
-                }
-                if(distances.get(j) > maxDistance) {
-                    maxDistance = distances.get(j);
-                    centerIndex = j;
-                }
-            }
-            C.add(S.get(centerIndex));
-            S.remove(centerIndex);
-            distances.remove(centerIndex);
-            System.out.println("Indice nuovo centro " + centerIndex);
-        }
-        return C;
-    }
-
-
-    public static ArrayList<Vector> kCenterMPDZanet(ArrayList<Vector> s, int k)
+    public static ArrayList<Vector> kCenterMPD(ArrayList<Vector> s, int k)
     {
 
         ArrayList<Vector> centers = new ArrayList<>();
@@ -250,7 +206,6 @@ class G10HW2 {
             // Remove the centroid from the set S of remaining points and the distance tracker
             s.remove(new_cluster);
             distances.remove(new_cluster);
-            System.out.println("Indice nuovo centro di Zanet " + new_cluster);
 
         }
         return centers;
