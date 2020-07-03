@@ -1,5 +1,3 @@
-# BDC
+# Big Data Computing Homeworks
 
-## Homework 1
-
-Manca da fare Max partition size
+Spark programming
